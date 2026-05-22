@@ -37,6 +37,31 @@ class PackageController {
         }).send(res);
     }
 
+    async updatePackage(req, res) {
+        const { id } = req.params;
+        const { name, price, description, durationDays } = req.body;
+        const data = await modelPackage.findByIdAndUpdate(
+            id,
+            { name, price, description, durationDays },
+            { new: true }
+        );
+        if (!data) throw new BadRequestError('Package not found');
+        return new OK({
+            message: 'Update package successfully',
+            metadata: data,
+        }).send(res);
+    }
+
+    async deletePackage(req, res) {
+        const { id } = req.params;
+        const data = await modelPackage.findByIdAndDelete(id);
+        if (!data) throw new BadRequestError('Package not found');
+        return new OK({
+            message: 'Delete package successfully',
+            metadata: data,
+        }).send(res);
+    }
+
     async createPaymentPackage(req, res) {
         const { price, paymentMethod } = req.body;
         const { id: userId } = req.user;
@@ -224,7 +249,7 @@ class PackageController {
 
         const balanceBefore = findUser.balance;
         const balanceAfter = balanceBefore - package2.price;
-
+////////// Đẩy tin
         job.isBoosted = true;
         job.boostExpiry = dayjs().add(package2.durationDays, 'day').toDate();
         job.boostPackage = package2._id;

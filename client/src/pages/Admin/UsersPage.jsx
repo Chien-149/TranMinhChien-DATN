@@ -12,11 +12,11 @@ const PAGE_SIZE = 10;
 
 function RoleBadge({ role }) {
     const map = {
-        admin: { color: 'bg-red-100 text-red-700', label: 'Quản trị viên' },
-        employer: { color: 'bg-violet-100 text-violet-700', label: 'Nhà tuyển dụng' },
-        user: { color: 'bg-blue-100 text-blue-700', label: 'Ứng viên' },
-        candidate: { color: 'bg-blue-100 text-blue-700', label: 'Ứng viên' },
-        company: { color: 'bg-violet-100 text-violet-700', label: 'Nhà tuyển dụng' },
+        admin: { color: 'bg-red-100 text-red-700', label: 'Admin (Quản trị viên)' },
+        employer: { color: 'bg-violet-100 text-violet-700', label: 'Employer (Nhà tuyển dụng)' },
+        user: { color: 'bg-blue-100 text-blue-700', label: 'User (Ứng viên)' },
+        candidate: { color: 'bg-blue-100 text-blue-700', label: 'User (Ứng viên)' },
+        company: { color: 'bg-violet-100 text-violet-700', label: 'Employer (Nhà tuyển dụng)' },
     };
     const roleData = map[role] || { color: 'bg-slate-100 text-slate-600', label: role };
     return (
@@ -180,18 +180,28 @@ export default function UsersPage() {
                                         <td className="px-5 py-3.5">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs flex-shrink-0 overflow-hidden">
-                                                    {u.avatar ? (
+                                                    {u.role === 'employer' && u.company?.companyLogo ? (
+                                                        <img
+                                                            src={
+                                                                u.company.companyLogo.startsWith('http') || u.company.companyLogo.startsWith('data:')
+                                                                    ? u.company.companyLogo
+                                                                    : `${import.meta.env.VITE_API_URL}/uploads/logo/${u.company.companyLogo}`
+                                                            }
+                                                            alt={u.company.companyName || u.fullName}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : u.avatar ? (
                                                         <img
                                                             src={getImageUrl(u.avatar, 'avatars')}
                                                             alt={u.fullName}
                                                             className="w-full h-full object-cover"
                                                         />
                                                     ) : (
-                                                        u.fullName?.charAt(0)?.toUpperCase() || '?'
+                                                        (u.role === 'employer' ? u.company?.companyName?.charAt(0)?.toUpperCase() : u.fullName?.charAt(0)?.toUpperCase()) || '?'
                                                     )}
                                                 </div>
                                                 <span className="font-medium text-slate-800 whitespace-nowrap">
-                                                    {u.fullName || '(Chưa đặt tên)'}
+                                                    {u.role === 'employer' ? u.company?.companyName || u.fullName || '(Chưa đặt tên)' : u.fullName || '(Chưa đặt tên)'}
                                                 </span>
                                             </div>
                                         </td>
@@ -301,18 +311,30 @@ export default function UsersPage() {
                     <div className="mt-5 space-y-4">
                         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold flex-shrink-0 overflow-hidden">
-                                {editUser.avatar ? (
+                                {editUser.role === 'employer' && editUser.company?.companyLogo ? (
+                                    <img
+                                        src={
+                                            editUser.company.companyLogo.startsWith('http') || editUser.company.companyLogo.startsWith('data:')
+                                                ? editUser.company.companyLogo
+                                                : `${import.meta.env.VITE_API_URL}/uploads/logo/${editUser.company.companyLogo}`
+                                        }
+                                        alt={editUser.company.companyName || editUser.fullName}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : editUser.avatar ? (
                                     <img
                                         src={getImageUrl(editUser.avatar, 'avatars')}
                                         alt={editUser.fullName}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    editUser.fullName?.charAt(0)?.toUpperCase()
+                                    (editUser.role === 'employer' ? editUser.company?.companyName?.charAt(0)?.toUpperCase() : editUser.fullName?.charAt(0)?.toUpperCase()) || '?'
                                 )}
                             </div>
                             <div>
-                                <p className="font-semibold text-slate-800 text-sm">{editUser.fullName}</p>
+                                <p className="font-semibold text-slate-800 text-sm">
+                                    {editUser.role === 'employer' ? editUser.company?.companyName || editUser.fullName : editUser.fullName}
+                                </p>
                                 <p className="text-xs text-slate-500">{editUser.email}</p>
                             </div>
                         </div>
@@ -326,11 +348,11 @@ export default function UsersPage() {
                                 {ROLES.map((r) => (
                                     <option key={r} value={r}>
                                         {{
-                                            admin: 'Quản trị viên',
-                                            employer: 'Nhà tuyển dụng',
-                                            user: 'Ứng viên',
-                                            company: 'Nhà tuyển dụng',
-                                            candidate: 'Ứng viên',
+                                            admin: 'Admin (Quản trị viên)',
+                                            employer: 'Employer (Nhà tuyển dụng)',
+                                            user: 'User (Ứng viên)',
+                                            company: 'Employer (Nhà tuyển dụng)',
+                                            candidate: 'User (Ứng viên)',
                                         }[r] || r}
                                     </option>
                                 ))}

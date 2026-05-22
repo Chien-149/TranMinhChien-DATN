@@ -14,6 +14,7 @@ import {
     Bell,
     ChevronDown,
     ShieldCheck,
+    Home,
 } from 'lucide-react';
 import { useAuth } from '../../store/authStore';
 
@@ -101,6 +102,23 @@ export default function AdminLayout() {
             {/* ===== MAIN AREA ===== */}
             <div className="flex-1 flex flex-col lg:ml-60 min-h-screen">
                 {/* Topbar */}
+                <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 flex items-center shadow-sm">
+                    <button
+                        className="lg:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
+                        onClick={() => setSidebarOpen(true)}
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <div className="flex-1" />
+                    <button 
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        title="Quay về trang chủ"
+                    >
+                        <Home size={16} />
+                        <span className="hidden sm:block">Trang chủ</span>
+                    </button>
+                </header>
 
                 {/* Page content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8">

@@ -25,17 +25,31 @@ const FOOTER_LINKS = {
 };
 
 export default function Footer() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
 
-    const handleLinkClick = (e, title, href) => {
-        if (!user && (title === 'Ứng viên' || title === 'Nhà tuyển dụng')) {
-            const publicLinks = ['/jobs', '/companies', '/blog'];
-            if (publicLinks.includes(href)) {
-                return; // Let the Link navigate normally for public routes
-            }
+    const handleLinkClick = async (e, title, href) => {
+        const isUserSection = title === 'Ứng viên';
+        const isEmployerSection = title === 'Nhà tuyển dụng';
+        
+        const publicLinks = ['/jobs', '/companies', '/blog'];
+        if (publicLinks.includes(href)) {
+            return; // Let the Link navigate normally for public routes
+        }
+
+        if (!user && (isUserSection || isEmployerSection)) {
             e.preventDefault();
-            navigate('/login', { state: { from: href, role: title === 'Ứng viên' ? 'user' : 'employer' } });
+            navigate('/login', { state: { from: href, role: isUserSection ? 'user' : 'employer' } });
+        } else if (user) {
+            if (isUserSection && user.role !== 'user' && user.role !== 'admin') {
+                e.preventDefault();
+                await logout();
+                navigate('/login', { state: { from: href, role: 'user' } });
+            } else if (isEmployerSection && user.role !== 'employer' && user.role !== 'admin') {
+                e.preventDefault();
+                await logout();
+                navigate('/login', { state: { from: href, role: 'employer' } });
+            }
         }
     };
 
@@ -78,9 +92,9 @@ export default function Footer() {
                         {/* Socials */}
                         <div className="flex gap-3 mt-5">
                             {[
-                                { icon: <Facebook size={17} />, href: '#' },
-                                { icon: <Youtube size={17} />, href: '#' },
-                                { icon: <Linkedin size={17} />, href: '#' },
+                                { icon: <Facebook size={17} />, href: 'https://www.facebook.com/chien.tranminh.3192' },
+                                { icon: <Youtube size={17} />, href: 'https://www.youtube.com/@minhchien14-9' },
+                                { icon: <Linkedin size={17} />, href: 'https://www.linkedin.com/jobs/' },
                             ].map((s, i) => (
                                 <a
                                     key={i}
@@ -120,10 +134,10 @@ export default function Footer() {
                         © {new Date().getFullYear()} Job24h. Bản quyền thuộc về Job24h Vietnam.
                     </p>
                     <div className="flex items-center gap-4 text-xs text-slate-500">
-                        <Link to="#" className="hover:text-white transition-colors">
+                        <Link to="/terms" className="hover:text-white transition-colors">
                             Điều khoản sử dụng
                         </Link>
-                        <Link to="#" className="hover:text-white transition-colors">
+                        <Link to="/privacy" className="hover:text-white transition-colors">
                             Chính sách bảo mật
                         </Link>
                     </div>

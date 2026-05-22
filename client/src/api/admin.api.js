@@ -27,6 +27,8 @@ export const adminAPI = {
     // Packages (gói dịch vụ)
     getAllPackages: () => axiosInstance.get('/api/packages/list'),
     createPackage: (data) => axiosInstance.post('/api/packages/create', data),
+    updatePackage: (id, data) => axiosInstance.put(`/api/packages/${id}`, data),
+    deletePackage: (id) => axiosInstance.delete(`/api/packages/${id}`),
 
     // Blog
     getAllBlogs: () => axiosInstance.get('/api/blog/get-all'),

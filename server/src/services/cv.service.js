@@ -126,12 +126,20 @@ class CVService {
         let avatarBase64 = null;
         if (cv.profile?.avatar) {
             try {
-                const avatarPath = path.join(__dirname, '../uploads', cv.profile.avatar);
-                if (fs.existsSync(avatarPath)) {
-                    const imgBuffer = fs.readFileSync(avatarPath);
-                    const ext = path.extname(avatarPath).slice(1).toLowerCase() || 'jpeg';
+                if (cv.profile.avatar.startsWith('http')) {
+                    const axios = require('axios');
+                    const response = await axios.get(cv.profile.avatar, { responseType: 'arraybuffer' });
+                    const ext = cv.profile.avatar.split('.').pop().split(/#|\?/)[0].toLowerCase();
                     const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
-                    avatarBase64 = `data:${mimeType};base64,${imgBuffer.toString('base64')}`;
+                    avatarBase64 = `data:${mimeType};base64,${Buffer.from(response.data, 'binary').toString('base64')}`;
+                } else {
+                    const avatarPath = path.join(__dirname, '../uploads/avatars', cv.profile.avatar);
+                    if (fs.existsSync(avatarPath)) {
+                        const imgBuffer = fs.readFileSync(avatarPath);
+                        const ext = path.extname(avatarPath).slice(1).toLowerCase() || 'jpeg';
+                        const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                        avatarBase64 = `data:${mimeType};base64,${imgBuffer.toString('base64')}`;
+                    }
                 }
             } catch (err) {
                 console.error('Could not read avatar file:', err.message);

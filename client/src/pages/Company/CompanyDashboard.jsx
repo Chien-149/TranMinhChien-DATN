@@ -34,15 +34,17 @@ export default function CompanyDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [timeRange, setTimeRange] = useState('all');
+    const [customDate, setCustomDate] = useState('');
+    const [customMonth, setCustomMonth] = useState('');
 
     useEffect(() => {
         setLoading(true);
         companyAPI
-            .getDashboard({ timeRange })
+            .getDashboard({ timeRange, customDate, customMonth })
             .then((res) => setData(res.data?.data))
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [timeRange]);
+    }, [timeRange, customDate, customMonth]);
 
     if (loading && !data) {
         return (
@@ -64,20 +66,40 @@ export default function CompanyDashboard() {
                     <h1 className="text-2xl font-bold text-slate-900">Thống kê tổng quan</h1>
                     <p className="text-slate-500 mt-1 text-sm">Dữ liệu cập nhật theo thời gian thực</p>
                 </div>
-                <div className="relative">
-                    <select
-                        value={timeRange}
-                        onChange={(e) => setTimeRange(e.target.value)}
-                        className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all cursor-pointer shadow-sm hover:bg-slate-50"
-                    >
-                        <option value="today">Hôm nay</option>
-                        <option value="month">Tháng này</option>
-                        <option value="all">Tất cả thời gian</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                        </svg>
+                <div className="flex items-center gap-3">
+                    {timeRange === 'custom_date' && (
+                        <input
+                            type="date"
+                            value={customDate}
+                            onChange={(e) => setCustomDate(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
+                        />
+                    )}
+                    {timeRange === 'custom_month' && (
+                        <input
+                            type="month"
+                            value={customMonth}
+                            onChange={(e) => setCustomMonth(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
+                        />
+                    )}
+                    <div className="relative">
+                        <select
+                            value={timeRange}
+                            onChange={(e) => setTimeRange(e.target.value)}
+                            className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all cursor-pointer shadow-sm hover:bg-slate-50"
+                        >
+                            <option value="today">Hôm nay</option>
+                            <option value="month">Tháng này</option>
+                            <option value="all">Tất cả thời gian</option>
+                            <option value="custom_date">Theo ngày</option>
+                            <option value="custom_month">Theo tháng</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -87,22 +109,22 @@ export default function CompanyDashboard() {
                 <StatCard
                     icon={Briefcase}
                     label="Tổng tin đăng"
-                    value={stats.totalJobs}
+                    value={stats.totalJobs || 0}
                     color="bg-indigo-500"
-                    sub={`${stats.activeJobs} đang hiển thị`}
+                    sub={`${stats.activeJobs ?? 0} đang hiển thị`}
                 />
                 <StatCard
                     icon={FileText}
                     label="Tổng ứng viên"
-                    value={stats.totalApplications}
+                    value={stats.totalApplications || 0}
                     color="bg-violet-500"
-                    sub={`${stats.pendingApplications} chờ xử lý`}
+                    sub={`${stats.pendingApplications ?? 0} chờ xử lý`}
                 />
-                <StatCard icon={Eye} label="Lượt xem" value={stats.totalViews} color="bg-sky-500" />
+                <StatCard icon={Eye} label="Lượt xem" value={stats.totalViews || 0} color="bg-sky-500" />
                 <StatCard
                     icon={Wallet}
                     label="Số dư ví"
-                    value={stats.walletBalance?.toLocaleString('vi-VN') + ' đ'}
+                    value={(stats.walletBalance || 0).toLocaleString('vi-VN') + ' đ'}
                     color="bg-emerald-500"
                 />
             </div>

@@ -16,6 +16,8 @@ export default function PackagesPage() {
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
+    const [editMode, setEditMode] = useState(false);
+    const [editId, setEditId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
 
     useEffect(() => { fetchPackages(); }, []);
@@ -30,6 +32,20 @@ export default function PackagesPage() {
 
     const openCreate = () => {
         setForm(EMPTY_FORM);
+        setEditMode(false);
+        setEditId(null);
+        setShowModal(true);
+    };
+
+    const openEdit = (pkg) => {
+        setForm({
+            name: pkg.name,
+            price: pkg.price,
+            description: pkg.description || '',
+            durationDays: pkg.durationDays,
+        });
+        setEditMode(true);
+        setEditId(pkg._id);
         setShowModal(true);
     };
 
@@ -40,19 +56,40 @@ export default function PackagesPage() {
         }
         setSaving(true);
         try {
-            await adminAPI.createPackage({
-                name: form.name,
-                price: Number(form.price),
-                description: form.description,
-                durationDays: Number(form.durationDays),
-            });
-            message.success('Tạo gói dịch vụ thành công!');
+            if (editMode) {
+                await adminAPI.updatePackage(editId, {
+                    name: form.name,
+                    price: Number(form.price),
+                    description: form.description,
+                    durationDays: Number(form.durationDays),
+                });
+                message.success('Cập nhật gói dịch vụ thành công!');
+            } else {
+                await adminAPI.createPackage({
+                    name: form.name,
+                    price: Number(form.price),
+                    description: form.description,
+                    durationDays: Number(form.durationDays),
+                });
+                message.success('Tạo gói dịch vụ thành công!');
+            }
             setShowModal(false);
             fetchPackages();
         } catch {
-            message.error('Tạo gói dịch vụ thất bại!');
+            message.error(editMode ? 'Cập nhật gói dịch vụ thất bại!' : 'Tạo gói dịch vụ thất bại!');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await adminAPI.deletePackage(deleteTarget._id);
+            message.success('Đã xóa gói dịch vụ!');
+            setDeleteTarget(null);
+            fetchPackages();
+        } catch {
+            message.error('Xóa thất bại!');
         }
     };
 
@@ -85,6 +122,7 @@ export default function PackagesPage() {
                                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Giá</th>
                                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Thời hạn</th>
                                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Mô tả</th>
+                                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -111,6 +149,22 @@ export default function PackagesPage() {
                                         </span>
                                     </td>
                                     <td className="px-5 py-3.5 text-slate-500 text-sm max-w-xs truncate">{pkg.description || '—'}</td>
+                                    <td className="px-5 py-3.5">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => openEdit(pkg)}
+                                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                            >
+                                                <Pencil size={15} />
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteTarget(pkg)}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={15} />
+                                            </button>
+                                        </div>
+                                    </td>
                                 </motion.tr>
                             ))}
                             {packages.length === 0 && (
@@ -126,9 +180,9 @@ export default function PackagesPage() {
                 </div>
             )}
 
-            {/* Create Modal */}
+            {/* Create / Edit Modal */}
             <Modal
-                title={<span className="font-bold text-slate-800">Thêm Gói Dịch Vụ Mới</span>}
+                title={<span className="font-bold text-slate-800">{editMode ? 'Cập Nhật Gói Dịch Vụ' : 'Thêm Gói Dịch Vụ Mới'}</span>}
                 open={showModal}
                 onCancel={() => setShowModal(false)}
                 footer={null}
@@ -183,10 +237,42 @@ export default function PackagesPage() {
                     <div className="flex gap-3 pt-2">
                         <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold hover:bg-slate-200 transition-colors text-sm">Hủy</button>
                         <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-2">
-                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} /> Tạo mới</>}
+                            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} /> {editMode ? 'Cập nhật' : 'Tạo mới'}</>}
                         </button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Delete Confirm Modal */}
+            <Modal
+                title={<span className="font-bold text-slate-800">Xác nhận xóa</span>}
+                open={!!deleteTarget}
+                onCancel={() => setDeleteTarget(null)}
+                footer={null}
+                centered
+                width={400}
+            >
+                {deleteTarget && (
+                    <div className="mt-4">
+                        <p className="text-sm text-slate-600">
+                            Bạn chắc chắn muốn xóa gói dịch vụ <strong>{deleteTarget.name}</strong>? Hành động này không thể hoàn tác.
+                        </p>
+                        <div className="flex gap-3 mt-5">
+                            <button
+                                onClick={() => setDeleteTarget(null)}
+                                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold hover:bg-slate-200 transition-colors text-sm"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-colors text-sm"
+                            >
+                                Xóa
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );

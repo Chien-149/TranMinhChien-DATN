@@ -15,12 +15,14 @@ export function AuthProvider({ children }) {
             const originalText = bytes.toString(CryptoJS.enc.Utf8);
             if (!originalText) {
                 console.error('Failed to decrypt data');
-                return;
+                return null;
             }
             const userData = JSON.parse(originalText);
             setUser(userData || null);
+            return userData; // trả về để các hàm gọi có thể đọc role ngay
         } catch {
             setUser(null);
+            return null;
         } finally {
             setLoading(false);
         }
@@ -31,9 +33,9 @@ export function AuthProvider({ children }) {
     }, [fetchMe]);
 
     const login = async (data) => {
-        const res = await authAPI.login(data);
-        await fetchMe();
-        return res;
+        await authAPI.login(data);
+        const userData = await fetchMe(); // fetchMe giờ return user
+        return userData;                  // trả thẳng userData để LoginPage đọc role
     };
 
     const loginGoogle = async (token) => {

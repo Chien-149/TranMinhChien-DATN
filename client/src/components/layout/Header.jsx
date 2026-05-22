@@ -21,12 +21,15 @@ import {
     Wallet,
     Plus,
     Shield,
+    Home,
 } from 'lucide-react';
 import { useAuth } from '../../store/authStore';
 import { Dropdown, Badge, Avatar, Tooltip } from 'antd';
 import NotificationBell from '../NotificationBell';
+import { companyAPI } from '../../api/company.api';
 
 const navLinks = [
+    { label: 'Trang chủ', href: '/', icon: <Home size={16} /> },
     { label: 'Việc làm', href: '/jobs', icon: <Briefcase size={16} /> },
     { label: 'Công ty', href: '/companies', icon: <Building2 size={16} /> },
     { label: 'Blog', href: '/blog', icon: <FileText size={16} /> },
@@ -150,6 +153,20 @@ export default function Header() {
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const searchRef = useRef(null);
+    const [company, setCompany] = useState(null);
+
+    useEffect(() => {
+        if (user?.role === 'employer') {
+            const fetchCompany = () => {
+                companyAPI.getMyCompany()
+                    .then((res) => setCompany(res.data?.data))
+                    .catch(console.error);
+            };
+            fetchCompany();
+            window.addEventListener('companyUpdated', fetchCompany);
+            return () => window.removeEventListener('companyUpdated', fetchCompany);
+        }
+    }, [user]);
 
     useEffect(() => {
         const handler = () => setScrolled(window.scrollY > 10);
@@ -323,7 +340,7 @@ export default function Header() {
                                         <button className="flex items-center gap-2 p-1 pl-2 rounded-xl hover:bg-slate-100 transition-all">
                                             <div className="hidden md:flex flex-col items-end">
                                                 <span className="text-sm font-semibold text-slate-800 leading-tight line-clamp-1 max-w-[120px]">
-                                                    {user.fullName}
+                                                    {user.role === 'employer' ? company?.companyName || user.fullName : user.fullName}
                                                 </span>
                                                 <span className="text-xs text-slate-400 capitalize">
                                                     {user.role === 'user'
@@ -335,16 +352,22 @@ export default function Header() {
                                             </div>
                                             <Avatar
                                                 src={
-                                                    user.avatar
-                                                        ? user.avatar.startsWith('http')
-                                                            ? user.avatar
-                                                            : `${import.meta.env.VITE_API_URL}/uploads/avatars/${user.avatar}`
-                                                        : undefined
+                                                    user.role === 'employer' && company?.companyLogo
+                                                        ? company.companyLogo.startsWith('http') || company.companyLogo.startsWith('data:')
+                                                            ? company.companyLogo
+                                                            : `${import.meta.env.VITE_API_URL}/uploads/logo/${company.companyLogo}`
+                                                        : user.avatar
+                                                          ? user.avatar.startsWith('http')
+                                                              ? user.avatar
+                                                              : `${import.meta.env.VITE_API_URL}/uploads/avatars/${user.avatar}`
+                                                          : undefined
                                                 }
                                                 size={34}
                                                 className="ring-2 ring-indigo-100 ring-offset-1"
                                             >
-                                                {!user.avatar && user.fullName?.charAt(0)?.toUpperCase()}
+                                                {user.role === 'employer'
+                                                    ? (!company?.companyLogo && (company?.companyName?.charAt(0)?.toUpperCase() || user.fullName?.charAt(0)?.toUpperCase()))
+                                                    : (!user.avatar && user.fullName?.charAt(0)?.toUpperCase())}
                                             </Avatar>
                                             <ChevronDown size={14} className="text-slate-400 hidden md:block" />
                                         </button>
@@ -419,11 +442,28 @@ export default function Header() {
                                 {/* User info */}
                                 {user && (
                                     <div className="flex items-center gap-3 p-3 mb-3 bg-indigo-50 rounded-xl">
-                                        <Avatar src={user.avatar || undefined} size={40}>
-                                            {!user.avatar && user.fullName?.charAt(0)?.toUpperCase()}
+                                        <Avatar 
+                                            src={
+                                                user.role === 'employer' && company?.companyLogo
+                                                    ? company.companyLogo.startsWith('http') || company.companyLogo.startsWith('data:')
+                                                        ? company.companyLogo
+                                                        : `${import.meta.env.VITE_API_URL}/uploads/logo/${company.companyLogo}`
+                                                    : user.avatar
+                                                      ? user.avatar.startsWith('http')
+                                                          ? user.avatar
+                                                          : `${import.meta.env.VITE_API_URL}/uploads/avatars/${user.avatar}`
+                                                      : undefined
+                                            } 
+                                            size={40}
+                                        >
+                                            {user.role === 'employer'
+                                                ? (!company?.companyLogo && (company?.companyName?.charAt(0)?.toUpperCase() || user.fullName?.charAt(0)?.toUpperCase()))
+                                                : (!user.avatar && user.fullName?.charAt(0)?.toUpperCase())}
                                         </Avatar>
                                         <div>
-                                            <p className="text-sm font-semibold text-slate-800">{user.fullName}</p>
+                                            <p className="text-sm font-semibold text-slate-800">
+                                                {user.role === 'employer' ? company?.companyName || user.fullName : user.fullName}
+                                            </p>
                                             <p className="text-xs text-slate-500">
                                                 {user.role === 'user'
                                                     ? 'Ứng viên'

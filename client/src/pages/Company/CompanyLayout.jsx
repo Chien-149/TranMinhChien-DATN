@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -12,9 +12,12 @@ import {
     X,
     ChevronDown,
     Bell,
+    Home,
 } from 'lucide-react';
 import { useAuth } from '../../store/authStore';
 import NotificationBell from '../../components/NotificationBell';
+
+import { companyAPI } from '../../api/company.api';
 
 const navItems = [
     { to: '/company/dashboard', icon: LayoutDashboard, label: 'Thống kê' },
@@ -29,6 +32,19 @@ export default function CompanyLayout() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [company, setCompany] = useState(null);
+
+    const fetchCompany = () => {
+        companyAPI.getMyCompany()
+            .then((res) => setCompany(res.data?.data))
+            .catch(console.error);
+    };
+
+    useEffect(() => {
+        fetchCompany();
+        window.addEventListener('companyUpdated', fetchCompany);
+        return () => window.removeEventListener('companyUpdated', fetchCompany);
+    }, []);
 
     const handleLogout = async () => {
         await logout();
@@ -48,12 +64,33 @@ export default function CompanyLayout() {
                     ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
             >
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
-                    <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200">
-                        <Building2 size={18} className="text-white" />
-                    </div>
-                    <div>
-                        <p className="font-bold text-slate-800 text-sm leading-tight">JobPortal</p>
+                <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 overflow-hidden">
+                    {company?.companyLogo ? (
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md overflow-hidden flex-shrink-0 bg-white">
+                            <img
+                                src={
+                                    company.companyLogo.startsWith('data:') ||
+                                    company.companyLogo.startsWith('http') ||
+                                    company.companyLogo.startsWith('blob:')
+                                        ? company.companyLogo
+                                        : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/logo/${company.companyLogo}`
+                                }
+                                alt={company?.companyName || 'Company Logo'}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200 flex-shrink-0">
+                            <Building2 size={18} className="text-white" />
+                        </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                        <p
+                            className="font-bold text-slate-800 text-sm leading-tight truncate"
+                            title={company?.companyName || 'JobPortal'}
+                        >
+                            {company?.companyName || 'JobPortal'}
+                        </p>
                         <p className="text-[10px] text-indigo-500 uppercase tracking-widest font-medium">
                             Nhà tuyển dụng
                         </p>
@@ -115,27 +152,38 @@ export default function CompanyLayout() {
 
                     <div className="flex-1" />
 
+                    <button
+                        onClick={() => navigate('/')}
+                        className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors mr-2"
+                        title="Quay về trang chủ"
+                    >
+                        <Home size={16} />
+                        <span>Trang chủ</span>
+                    </button>
+
                     <NotificationBell />
 
                     <div className="flex items-center gap-2 pl-3 border-l border-slate-200 cursor-pointer">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {user?.avatar ? (
+                        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 bg-white">
+                            {company?.companyLogo ? (
                                 <img
                                     src={
-                                        user.avatar.startsWith('http')
-                                            ? user.avatar
-                                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/avatars/${user.avatar}`
+                                        company.companyLogo.startsWith('data:') ||
+                                        company.companyLogo.startsWith('http') ||
+                                        company.companyLogo.startsWith('blob:')
+                                            ? company.companyLogo
+                                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/uploads/logo/${company.companyLogo}`
                                     }
-                                    alt={user.fullName}
+                                    alt={company?.companyName}
                                     className="w-full h-full object-cover rounded-full"
                                 />
                             ) : (
-                                user?.fullName?.charAt(0)?.toUpperCase() || 'C'
+                                company?.companyName?.charAt(0)?.toUpperCase() || 'C'
                             )}
                         </div>
                         <div className="hidden sm:block">
                             <p className="text-sm font-semibold text-slate-800 leading-tight">
-                                {user?.fullName || 'Công ty'}
+                                {company?.companyName || 'Công ty'}
                             </p>
                             <p className="text-[11px] text-indigo-500 uppercase font-medium tracking-wide">Employer</p>
                         </div>

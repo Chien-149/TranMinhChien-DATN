@@ -105,6 +105,7 @@ class CompanyController {
             'companySize',
             'foundedYear',
             'socialLinks',
+            'taxCode',
         ];
 
         const updateData = {};
@@ -137,6 +138,8 @@ class CompanyController {
 
         const logoUrl = await uploadSingle(req.file, 'company-logos');
         const company = await Company.findOneAndUpdate({ userId }, { companyLogo: logoUrl }, { new: true });
+        const User = require('../models/user.model');
+        await User.findByIdAndUpdate(userId, { avatar: logoUrl });
 
         if (!company) {
             throw new NotFoundError('Không tìm thấy thông tin công ty');
@@ -174,7 +177,7 @@ class CompanyController {
     // Get company dashboard stats
     async getDashboardStats(req, res) {
         const { id: userId } = req.user;
-        const { timeRange = 'all' } = req.query; // 'today', 'month', 'all'
+        const { timeRange = 'all', customDate, customMonth } = req.query; // 'today', 'month', 'all', 'custom_date', 'custom_month'
 
         const company = await Company.findOne({ userId });
         if (!company) {
@@ -194,6 +197,17 @@ class CompanyController {
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
             dateFilter = { createdAt: { $gte: startOfMonth } };
+        } else if (timeRange === 'custom_date' && customDate) {
+            const startOfDay = new Date(customDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(customDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            dateFilter = { createdAt: { $gte: startOfDay, $lte: endOfDay } };
+        } else if (timeRange === 'custom_month' && customMonth) {
+            const [year, month] = customMonth.split('-');
+            const startOfMonth = new Date(year, month - 1, 1);
+            const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+            dateFilter = { createdAt: { $gte: startOfMonth, $lte: endOfMonth } };
         }
 
         // Build filter object for applications

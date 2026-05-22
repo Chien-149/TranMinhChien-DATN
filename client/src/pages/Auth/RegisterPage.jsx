@@ -1,3 +1,5 @@
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { requestLoginGoogle } from '../../config/UserRequest';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -124,10 +126,30 @@ export default function RegisterPage() {
             setLoading(false);
         }
     };
+    //Code thêm
+    const handleGoogleRegisterSuccess = async (response) => {
+    const { credential } = response;
 
-    const handleGoogleRegister = () => {
-        message.info('Tính năng Đăng ký bằng Google đang phát triển.');
-    };
+    try {
+        const data = {
+            credential,
+        };
+
+        const res = await requestLoginGoogle(data);
+
+        message.success(res.message || 'Đăng ký bằng Google thành công!');
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+
+        navigate('/');
+    } catch (error) {
+        console.error('Google register failed', error);
+        message.error('Đăng ký bằng Google thất bại.');
+    }
+};
+//////////
 
     const isEmployer = formData.role === 'employer';
 
@@ -161,18 +183,18 @@ export default function RegisterPage() {
 
                     <div className="mt-8">
                         {/* Option to use Google */}
-                        <div>
-                            <button
-                                onClick={handleGoogleRegister}
-                                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                        <div style={{ marginTop: '20px' }}>
+                            <GoogleOAuthProvider
+                                clientId={'845739753727-khigu72oe3qaqi1lgutbohvrq7v6h56m.apps.googleusercontent.com'}
                             >
-                                <img
-                                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                                    className="h-5 w-5"
-                                    alt="Google logo"
+                                <GoogleLogin
+                                    onSuccess={handleGoogleRegisterSuccess}
+                                    onError={() => {
+                                    console.log('Google Register Failed');
+                                    message.error('Đăng ký bằng Google thất bại.');
+                                    }}
                                 />
-                                Đăng ký bằng Google
-                            </button>
+                            </GoogleOAuthProvider>
                         </div>
 
                         <div className="mt-6 relative">

@@ -1,25 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, Camera, Building2, Globe, Mail, Phone, MapPin, Users, Calendar } from 'lucide-react';
+import { Save, Camera, Building2, Globe, Mail, Phone, MapPin, Users, Calendar, Briefcase, FileText } from 'lucide-react';
 import { message } from 'antd';
 import { companyAPI } from '../../api/company.api';
+import { industriesAPI } from '../../api/industries.api';
+import { useAuth } from '../../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function CompanyProfile() {
+    const { updateUser } = useAuth();
     const [company, setCompany] = useState(null);
     const [form, setForm] = useState({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const logoRef = useRef(null);
 
+    const [industries, setIndustries] = useState([]);
+
     useEffect(() => {
-        companyAPI
-            .getMyCompany()
-            .then((res) => {
-                const c = res.data?.data;
+        Promise.all([companyAPI.getMyCompany(), industriesAPI.getAll()])
+            .then(([resCompany, resIndustries]) => {
+                const c = resCompany.data?.data;
                 setCompany(c);
                 setForm({
                     companyName: c?.companyName || '',
+                    taxCode: c?.taxCode || '',
+                    industry: c?.industry || '',
                     companyEmail: c?.companyEmail || '',
                     companyPhone: c?.companyPhone || '',
                     companyAddress: c?.companyAddress || '',
@@ -28,6 +34,7 @@ export default function CompanyProfile() {
                     companySize: c?.companySize || '',
                     foundedYear: c?.foundedYear || '',
                 });
+                setIndustries(resIndustries.data?.metadata || []);
             })
             .catch(console.error)
             .finally(() => setLoading(false));
@@ -38,6 +45,7 @@ export default function CompanyProfile() {
         try {
             await companyAPI.updateCompany(form);
             message.success('Cập nhật thông tin công ty thành công!');
+            window.dispatchEvent(new Event('companyUpdated'));
         } catch {
             message.error('Cập nhật thất bại!');
         } finally {
@@ -55,8 +63,13 @@ export default function CompanyProfile() {
             const previewUrl = URL.createObjectURL(file);
             setCompany((prev) => ({ ...prev, companyLogo: previewUrl }));
 
-            await companyAPI.uploadLogo(formData);
+            const res = await companyAPI.uploadLogo(formData);
+            const logo = res.data?.data?.logo || res.data?.metadata?.logo;
+            if (logo) {
+                updateUser({ avatar: logo });
+            }
             message.success('Cập nhật logo thành công!');
+            window.dispatchEvent(new Event('companyUpdated'));
         } catch {
             message.error('Upload logo thất bại!');
         }
@@ -72,6 +85,8 @@ export default function CompanyProfile() {
 
     const fields = [
         { key: 'companyName', label: 'Tên công ty', icon: Building2, required: true },
+        { key: 'taxCode', label: 'Mã số thuế', icon: FileText, required: true },
+        { key: 'industry', label: 'Lĩnh vực hoạt động', icon: Briefcase, type: 'select', options: industries },
         { key: 'companyEmail', label: 'Email', icon: Mail },
         { key: 'companyPhone', label: 'Số điện thoại', icon: Phone },
         { key: 'companyAddress', label: 'Địa chỉ', icon: MapPin },
@@ -138,7 +153,7 @@ export default function CompanyProfile() {
                 <h2 className="font-bold text-slate-800">Thông tin cơ bản</h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {fields.map(({ key, label, icon: Icon, required, placeholder, type }) => (
+                    {fields.map(({ key, label, icon: Icon, required, placeholder, type, options }) => (
                         <div
                             key={key}
                             className={key === 'companyName' || key === 'companyAddress' ? 'sm:col-span-2' : ''}
@@ -148,13 +163,26 @@ export default function CompanyProfile() {
                             </label>
                             <div className="relative">
                                 <Icon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type={type || 'text'}
-                                    value={form[key] || ''}
-                                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                                    placeholder={placeholder || `Nhập ${label.toLowerCase()}...`}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-200 text-sm"
-                                />
+                                {type === 'select' ? (
+                                    <select
+                                        value={form[key] || ''}
+                                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-200 text-sm appearance-none"
+                                    >
+                                        <option value="">Chọn {label.toLowerCase()}</option>
+                                        {options?.map((opt) => (
+                                            <option key={opt._id} value={opt._id}>{opt.name}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type={type || 'text'}
+                                        value={form[key] || ''}
+                                        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                                        placeholder={placeholder || `Nhập ${label.toLowerCase()}...`}
+                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-200 text-sm"
+                                    />
+                                )}
                             </div>
                         </div>
                     ))}

@@ -112,7 +112,36 @@ class CVController {
         }
 
         const CVService = require('../services/cv.service');
-        const html = CVService.generateCVHTML(cv, template);
+
+        // Convert avatar to base64 so Puppeteer can embed it without network requests
+        let avatarBase64 = null;
+        if (cv.profile?.avatar) {
+            try {
+                if (cv.profile.avatar.startsWith('http')) {
+                    const axios = require('axios');
+                    const response = await axios.get(cv.profile.avatar, { responseType: 'arraybuffer' });
+                    const ext = cv.profile.avatar.split('.').pop().split(/#|\?/)[0].toLowerCase();
+                    const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                    avatarBase64 = `data:${mimeType};base64,${Buffer.from(response.data, 'binary').toString('base64')}`;
+                } else if (cv.profile.avatar.startsWith('data:')) {
+                    avatarBase64 = cv.profile.avatar;
+                } else {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const avatarPath = path.join(__dirname, '../uploads/avatars', cv.profile.avatar);
+                    if (fs.existsSync(avatarPath)) {
+                        const imgBuffer = fs.readFileSync(avatarPath);
+                        const ext = path.extname(avatarPath).slice(1).toLowerCase() || 'jpeg';
+                        const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+                        avatarBase64 = `data:${mimeType};base64,${imgBuffer.toString('base64')}`;
+                    }
+                }
+            } catch (err) {
+                console.error('Could not read avatar file:', err.message);
+            }
+        }
+
+        const html = CVService.generateCVHTML(cv, template, avatarBase64);
 
         const puppeteer = require('puppeteer');
         const browser = await puppeteer.launch({

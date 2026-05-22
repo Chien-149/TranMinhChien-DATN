@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Briefcase, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../store/authStore';
 import { message } from 'antd';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { requestLoginGoogle } from '../../config/UserRequest';
 
 export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
-
-    // The user might have been redirected here from a protected route
-    const from = location.state?.from?.pathname || '/';
-    const role = location.state?.role || 'user';
 
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -30,12 +27,29 @@ export default function LoginPage() {
             setLoading(true);
             await login(formData);
             message.success('Đăng nhập thành công!');
-            // Chuyển hướng về trang trước đó hoặc trang chủ
-            navigate(from, { replace: true });
+            // AppLayout sẽ tự redirect về đúng trang theo role
+            navigate('/', { replace: true });
         } catch (error) {
             message.error(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSuccess = async (response) => {
+        const { credential } = response; // Nhận ID Token từ Google
+        try {
+            const data = {
+                credential,
+            };
+            const res = await requestLoginGoogle(data);
+            message.success(res.message);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            navigate('/');
+        } catch (error) {
+            console.error('Login failed', error);
         }
     };
 
@@ -64,7 +78,7 @@ export default function LoginPage() {
                             Bạn chưa có tài khoản?{' '}
                             <Link
                                 to="/register"
-                                state={{ role }}
+                                // state={{ role }}
                                 className="font-semibold text-indigo-600 hover:text-indigo-500"
                             >
                                 Đăng ký ngay
@@ -74,20 +88,14 @@ export default function LoginPage() {
 
                     <div className="mt-8">
                         {/* Option to use Google */}
-                        <div>
-                            <button
-                                onClick={handleGoogleLogin}
-                                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-300 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
-                            >
-                                <img
-                                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                                    className="h-5 w-5"
-                                    alt="Google logo"
-                                />
-                                Đăng nhập bằng Google
-                            </button>
-                        </div>
 
+                        <div style={{ marginTop: '20px' }}>
+                            <GoogleOAuthProvider
+                                clientId={'845739753727-khigu72oe3qaqi1lgutbohvrq7v6h56m.apps.googleusercontent.com'}
+                            >
+                                <GoogleLogin onSuccess={handleSuccess} onError={() => console.log('Login Failed')} />
+                            </GoogleOAuthProvider>
+                        </div>
                         <div className="mt-6 relative">
                             <div className="absolute inset-0 flex items-center" aria-hidden="true">
                                 <div className="w-full border-t border-slate-200" />

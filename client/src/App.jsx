@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './store/authStore';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { AuthProvider, useAuth } from './store/authStore';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/Home/HomePage';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
 import JobDetailPage from './pages/Job/JobDetailPage';
 import JobSearchPage from './pages/Job/JobSearchPage';
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -38,6 +40,9 @@ import CompanyMessager from './pages/Company/CompanyMessager';
 import AIChatbot from './components/AIChatbot';
 import AboutPage from './pages/Static/AboutPage';
 import ContactPage from './pages/Static/ContactPage';
+import TermsPage from './pages/Static/TermsPage';
+import PrivacyPage from './pages/Static/PrivacyPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Placeholder pages – will be built progressively
 function PlaceholderPage({ title }) {
@@ -53,10 +58,40 @@ function PlaceholderPage({ title }) {
 
 function AppLayout() {
     const location = useLocation();
-    const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
-    const isAdminPage = location.pathname.startsWith('/admin');
-    const isCompanyPage = location.pathname.startsWith('/company');
-    const isUserPage = location.pathname.startsWith('/user');
+    const navigate = useNavigate();
+    const { user, loading } = useAuth();
+
+    const path = location.pathname;
+    const isAuthPage = ['/login', '/register', '/forgot-password'].includes(path);
+    const isAdminPage = path.startsWith('/admin');
+    const isCompanyPage = path.startsWith('/company');
+    const isUserPage = path.startsWith('/user');
+
+    // Tự động redirect về đúng khu vực theo role khi đã đăng nhập (hoạt động ở MỌI trang)
+    useEffect(() => {
+        if (loading || !user) return;
+
+        // Nếu đã login mà vào trang auth (/login, /register) -> đẩy về dashboard
+        if (isAuthPage) {
+            if (user.role === 'admin') navigate('/admin/dashboard', { replace: true });
+            else if (user.role === 'employer') navigate('/company/dashboard', { replace: true });
+            else navigate('/', { replace: true });
+            return;
+        }
+
+        // Chặn admin vào các trang không phải của admin
+        if (user.role === 'admin' && !isAdminPage) {
+            navigate('/admin/dashboard', { replace: true });
+        } 
+        // Chặn nhà tuyển dụng vào trang admin hoặc user
+        else if (user.role === 'employer' && (isAdminPage || isUserPage)) {
+            navigate('/company/dashboard', { replace: true });
+        } 
+        // Chặn user thường vào trang admin hoặc nhà tuyển dụng
+        else if (user.role === 'user' && (isAdminPage || isCompanyPage)) {
+            navigate('/', { replace: true });
+        }
+    }, [user, loading, path, isAdminPage, isCompanyPage, isUserPage, isAuthPage, navigate]);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
@@ -76,9 +111,11 @@ function AppLayout() {
                     <Route path="/ai-assistant" element={<PlaceholderPage title="AI Assistant" />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/forgot-password" element={<PlaceholderPage title="Quên mật khẩu" />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
                     {/* Candidate routes */}
                     <Route path="/profile" element={<PlaceholderPage title="Hồ sơ cá nhân" />} />
@@ -90,8 +127,15 @@ function AppLayout() {
                     <Route path="/messages" element={<PlaceholderPage title="Tin nhắn" />} />
                     <Route path="/ai-cv-review" element={<PlaceholderPage title="AI Review CV" />} />
 
-                    {/* Company / Employer routes */}
-                    <Route path="/company" element={<CompanyLayout />}>
+                    {/* Company / Employer routes – chỉ dành cho employer */}
+                    <Route
+                        path="/company"
+                        element={
+                            <ProtectedRoute allowedRoles={['employer']}>
+                                <CompanyLayout />
+                            </ProtectedRoute>
+                        }
+                    >
                         <Route path="dashboard" element={<CompanyDashboard />} />
                         <Route path="profile" element={<CompanyProfile />} />
                         <Route path="jobs" element={<CompanyJobs />} />
@@ -107,8 +151,15 @@ function AppLayout() {
                     <Route path="/cv/preview/:cvId" element={<CVPreviewPage />} />
                     <Route path="/my-cvs" element={<MyCVs />} />
 
-                    {/* User / Candidate routes */}
-                    <Route path="/user" element={<UserLayout />}>
+                    {/* User / Candidate routes – chỉ dành cho user */}
+                    <Route
+                        path="/user"
+                        element={
+                            <ProtectedRoute allowedRoles={['user']}>
+                                <UserLayout />
+                            </ProtectedRoute>
+                        }
+                    >
                         <Route path="profile" element={<UserProfile />} />
                         <Route path="applications" element={<UserApplications />} />
                         <Route path="messages" element={<MessagerUser />} />
@@ -116,8 +167,15 @@ function AppLayout() {
                         <Route path="saved-jobs" element={<UserSavedJobs />} />
                     </Route>
 
-                    {/* Admin routes – use their own AdminLayout */}
-                    <Route path="/admin" element={<AdminLayout />}>
+                    {/* Admin routes – chỉ dành cho admin */}
+                    <Route
+                        path="/admin"
+                        element={
+                            <ProtectedRoute allowedRoles={['admin']}>
+                                <AdminLayout />
+                            </ProtectedRoute>
+                        }
+                    >
                         <Route path="dashboard" element={<DashboardPage />} />
                         <Route path="users" element={<UsersPage />} />
                         <Route path="companies" element={<CompaniesPage />} />

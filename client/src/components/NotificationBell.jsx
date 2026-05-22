@@ -224,7 +224,7 @@ export default function NotificationBell() {
             placement="bottomRight"
             overlayStyle={{ padding: 0 }}
         >
-            <button className="hidden sm:flex p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all relative">
+            <button className="flex p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all relative">
                 <Badge count={unread} size="small" offset={[-2, 2]}>
                     <Bell size={19} className="text-slate-500" />
                 </Badge>

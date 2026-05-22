@@ -2,7 +2,7 @@ const modelUser = require('../models/users.model');
 const modelApiKey = require('../models/apiKey.model');
 const modelCompany = require('../models/company.model');
 const modelIndustries = require('../models/industries.model');
-// const modelOtp = require('../models/otp.model');
+const modelOtp = require('../models/otp.model');
 // const modelMessageChatbot = require('../models/messageChatbot.model');
 // const { askHotelAssistant } = require('../utils/chatbot');
 
@@ -138,7 +138,30 @@ class UserService {
               }
             : {};
         const [data, total] = await Promise.all([
-            modelUser.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-password'),
+            modelUser.aggregate([
+                { $match: query },
+                { $sort: { createdAt: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $lookup: {
+                        from: 'companies',
+                        localField: '_id',
+                        foreignField: 'userId',
+                        as: 'company'
+                    }
+                },
+                {
+                    $addFields: {
+                        company: { $arrayElemAt: ['$company', 0] }
+                    }
+                },
+                {
+                    $project: {
+                        password: 0
+                    }
+                }
+            ]),
             modelUser.countDocuments(query),
         ]);
         return { data, total, page, totalPages: Math.ceil(total / limit) };
